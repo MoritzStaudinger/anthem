@@ -130,6 +130,10 @@ class ShardWriter:
 def read_records(src: Path) -> Iterator[dict]:
     """Stream records from a .jsonl(.gz) file or a directory of .json files."""
     if src.is_dir():
+        # Filenames are canonical Anthology ids; the id *inside* a record is
+        # not always, so we need the full set to tell the two failure modes
+        # apart (see below).
+        stems = {p.stem for p in src.glob("*.json")}
         for p in sorted(src.glob("*.json")):
             try:
                 rec = json.loads(p.read_text(encoding="utf-8"))
@@ -139,6 +143,19 @@ def read_records(src: Path) -> Iterator[dict]:
             # "paper_id": null, which would otherwise be dropped downstream.
             if not rec.get("paper_id"):
                 rec["paper_id"] = p.stem
+            # Two distinct failure modes when the record's id disagrees with
+            # its filename:
+            #   * the id names ANOTHER file that exists -> this record is that
+            #     other paper's content, misattributed. 40 such in 2026-05.
+            #   * the id names nothing -> it is a malformed spelling of this
+            #     paper's own id ("1993.iwpt.1.13" for "1993.iwpt-1.13"). 146
+            #     such. The filename is authoritative, so just normalise it.
+            if rec["paper_id"] != p.stem:
+                if rec["paper_id"] in stems:
+                    rec["_id_mismatch"] = p.stem
+                else:
+                    rec["_id_normalised"] = rec["paper_id"]
+                    rec["paper_id"] = p.stem
             yield rec
         return
     opener = gzip.open if src.suffix == ".gz" else open
@@ -332,6 +349,10 @@ def main() -> int:
     ap.add_argument("--meta-rows-per-shard", type=int, default=20000)
     ap.add_argument("--fulltext-rows-per-shard", type=int, default=1500)
     ap.add_argument("--version", default="202605")
+    ap.add_argument("--keep-id-mismatches", action="store_true",
+                    help="Emit records whose internal paper_id disagrees with "
+                         "their filename. Off by default: these are misattributed "
+                         "pipeline output and would duplicate a paper_id.")
     ap.add_argument("--scrub-emails", action="store_true",
                     help="Replace e-mail addresses in the parsed text with "
                          "<email-removed>. Off by default: the addresses are "
@@ -356,7 +377,16 @@ def main() -> int:
     n = 0
 
     no_id = 0
+    normalised = 0
+    mismatched: list = []
     for rec in read_records(args.metadata):
+        if rec.pop("_id_normalised", None) is not None:
+            normalised += 1
+        stem = rec.pop("_id_mismatch", None)
+        if stem is not None:
+            mismatched.append((stem, rec.get("paper_id")))
+            if not args.keep_id_mismatches:
+                continue
         pid = rec.get("paper_id")
         if not pid:
             # Only reachable for .jsonl input, where there is no filename to
@@ -461,12 +491,21 @@ def main() -> int:
     card = args.out / "README.md"
     card.write_text(_card(args.version, n, totals, lic_counts, models,
                             want_fulltext, ft_third_party,
-                            args.scrub_emails, extra),
+                            args.scrub_emails, extra, len(mismatched)),
                     encoding="utf-8")
 
     print(f"\n# papers read      : {n}")
     if no_id:
         print(f"# DROPPED no paper_id: {no_id}")
+    if normalised:
+        print(f"# id typos normalised: {normalised} (filename is authoritative)")
+    if mismatched:
+        verb = "kept" if args.keep_id_mismatches else "DROPPED"
+        print(f"# {verb} id-mismatched: {len(mismatched)}")
+        qp = args.out / "id_mismatches.txt"
+        qp.write_text("".join(f"{f}\t{p}\n" for f, p in sorted(mismatched)),
+                      encoding="utf-8")
+        print(f"#   listed in        : {qp}")
     for k, v in totals.items():
         print(f"# {k:20s}: {v} rows")
     print(f"# year backfilled  : {year_backfilled}")
@@ -482,7 +521,8 @@ def main() -> int:
 def _card(version: str, n_papers: int, totals: Dict[str, int],
           lic: Dict[str, int], models: Dict[str, int], fulltext: bool,
           ft_third_party: int = 0, scrubbed_emails: bool = False,
-          extra_cfgs: Optional[Dict[str, tuple]] = None) -> str:
+          extra_cfgs: Optional[Dict[str, tuple]] = None,
+          n_excluded: int = 0) -> str:
     cfgs: list = ["papers", "affiliations", "topics"]
     if fulltext and totals.get("fulltext"):
         cfgs.append("fulltext")

@@ -62,9 +62,15 @@ pip install -r requirements.txt
 make release    # annotations, then corpus (the corpus build writes the card)
 make check      # gates the upload: leaked paths, orphan ids, counts
 hf auth login   # needs a write token
-make upload
+HF_HUB_DISABLE_XET=1 make upload
 make tag
 ```
+
+`HF_HUB_DISABLE_XET=1` matters. With HF's Xet backend enabled the 4 GB
+upload ran at 0.005 MB/s and effectively stalled -- one file in seven
+minutes -- while the same link sustained 1.9 MB/s with Xet off. The
+progress counter keeps reporting workers as busy either way, so check
+the interface counters rather than the status line if it looks slow.
 
 `make check` fails the build on an absolute path anywhere in a text column or a
 `paper_id` in `affiliations`/`topics`/`fulltext` that is absent from `papers`.

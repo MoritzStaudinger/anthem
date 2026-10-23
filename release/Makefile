@@ -51,7 +51,7 @@ check:
 # `hf upload` chunks and resumes by itself, which matters for the multi-GB
 # fulltext shards; plain `git push` over LFS does not resume as gracefully.
 upload:
-	hf upload $(REPO) $(OUT) . --repo-type=dataset \
+	HF_HUB_DISABLE_XET=1 hf upload $(REPO) $(OUT) . --repo-type=dataset \
 	  --commit-message "ANTHEM-$(VERSION): corpus, fulltext, benchmark, annotations"
 
 tag:

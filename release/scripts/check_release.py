@@ -27,7 +27,9 @@ except ImportError:  # pragma: no cover
     print("# ERROR: pyarrow is required -> pip install 'pyarrow<19'", file=sys.stderr)
     raise SystemExit(1)
 
-PATH_RX = re.compile(r"/(?:home|share|work|scratch)/[A-Za-z0-9._-]+/")
+# Must not fire on a URL such as "brighton.ac.uk/home/Anja.Belz/": require
+# the path to start at a boundary rather than follow a hostname.
+PATH_RX = re.compile(r"(?<![\w.:/-])/(?:home|share|work|scratch)/[A-Za-z0-9._-]+/")
 # Deliberately narrow: TEI contains <email> tags, and a bare @ is common in
 # formulae and citations.
 MAIL_RX = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
