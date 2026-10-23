@@ -502,7 +502,9 @@ def main() -> int:
     if mismatched:
         verb = "kept" if args.keep_id_mismatches else "DROPPED"
         print(f"# {verb} id-mismatched: {len(mismatched)}")
-        qp = args.out / "id_mismatches.txt"
+        # Written BESIDE the release dir, not inside it: it is an internal
+        # diagnostic and must not be swept up by `hf upload <out>`.
+        qp = args.out.parent / f"{args.out.name}_id_mismatches.txt"
         qp.write_text("".join(f"{f}\t{p}\n" for f, p in sorted(mismatched)),
                       encoding="utf-8")
         print(f"#   listed in        : {qp}")
