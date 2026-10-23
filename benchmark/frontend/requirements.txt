@@ -1,0 +1,5 @@
+PyMuPDF==1.24.1
+pandas==2.2.3
+streamlit==1.45.1
+requests==2.32.3
+altair==5.5.0

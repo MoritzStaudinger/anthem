@@ -1,0 +1,27 @@
+Bootstrap: docker
+From: python:3.12-slim
+
+%labels
+    Author Moritz Staudinger
+    Purpose ACL Anthology downloader
+
+%environment
+    PYTHONUNBUFFERED=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+%post
+    set -e
+    apt-get update
+    apt-get install -y --no-install-recommends git ca-certificates
+    rm -rf /var/lib/apt/lists/*
+
+    mkdir -p /app /work /logs
+
+    pip install --no-cache-dir -r /app/requirements.txt
+
+%files
+    requirements.txt /app/requirements.txt
+    scripts/acl_downloader.py /app/acl_downloader.py
+
+%runscript
+    exec python3 -u /app/acl_downloader.py "$@"

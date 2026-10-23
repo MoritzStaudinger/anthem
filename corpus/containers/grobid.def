@@ -1,0 +1,21 @@
+Bootstrap: docker
+From: grobid/grobid:0.8.2
+
+%files
+    # Copy the internal python script from your local machine to the container
+    ./scripts/grobid_parser.py /usr/local/bin/grobid_parser.py
+
+%post
+    # Install Python, pip, and necessary libraries
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        curl
+
+    python3 -m pip install grobid-client requests
+
+    rm -rf /var/lib/apt/lists/*
+%runscript
+    # The container will now execute your Python script directly
+    exec python3 /usr/local/bin/grobid_parser.py "$@"

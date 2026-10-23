@@ -1,0 +1,54 @@
+Bootstrap: docker
+From: python:3.11-slim
+
+%labels
+    Author Moritz Staudinger
+    Purpose PyMuPDF text extraction with Tesseract OCR fallback for ACL / scientific corpora
+
+%environment
+    PYTHONUNBUFFERED=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+    LC_ALL=C.UTF-8
+    LANG=C.UTF-8
+
+%post
+    set -e
+
+    apt-get update
+
+    # --- System deps ---
+    # - PyMuPDF runtime libs for rendering
+    # - Tesseract OCR engine
+    # - Pillow image stack dependencies
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        libglib2.0-0 \
+        libgl1 \
+        libxrender1 \
+        libxext6 \
+        libsm6 \
+        tesseract-ocr \
+        tesseract-ocr-eng \
+        libjpeg62-turbo \
+        zlib1g \
+        libpng16-16 \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+    # Create directory structure
+    mkdir -p /app
+    mkdir -p /work
+    mkdir -p /logs
+
+    # Install Python dependencies
+    pip install --no-cache-dir -r /app/requirements.txt
+
+    # Optional: quick sanity check that tesseract is present
+    tesseract --version >/dev/null 2>&1 || { echo "[fatal] tesseract missing"; exit 1; }
+
+%files
+    requirements.txt /app/requirements.txt
+    scripts/hybrid_parse_pdfs.py /app/hybrid_parse_pdfs.py
+
+%runscript
+    exec python3 -u /app/hybrid_parse_pdfs.py "$@"

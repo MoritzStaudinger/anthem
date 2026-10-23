@@ -1,0 +1,26 @@
+# Secrets
+.env
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+.ipynb_checkpoints/
+
+# Pipeline output and data: published as the HuggingFace dataset instead.
+reports/
+models/
+cache/
+data/
+!benchmark/data/eval/
+*.parquet
+*.tar.zst
+*.jsonl.gz
+
+# Local
+.idea/
+.DS_Store

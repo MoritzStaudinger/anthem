@@ -1,0 +1,32 @@
+# Environment for LoRA fine-tuning Qwen2.5-7B on affiliation extraction.
+# Separate from compare_eval because torch + bnb are heavy and we want
+# the version pins locked.
+#
+# Cluster setup:
+#   conda create -n lora_train python=3.11 -y
+#   conda activate lora_train
+#   pip install -r requirements-lora.txt
+#
+# Verify:
+#   python -c "import torch, peft, trl, bitsandbytes; \
+#              print(torch.__version__, torch.cuda.is_available())"
+
+# ---- Core training stack ----
+torch>=2.4,<2.7
+transformers>=4.45,<5.0
+peft>=0.13
+trl>=0.12
+accelerate>=1.0
+datasets>=3.0
+bitsandbytes>=0.43      # 4-bit + paged_adamw_8bit
+sentencepiece>=0.2      # Qwen tokenizer dep
+einops                  # transformers attention paths
+
+# ---- Data prep (OpenAlex + S2ORC) ----
+requests>=2.32
+tqdm>=4.65
+python-dotenv>=1.0
+
+# ---- Optional but useful ----
+numpy>=1.26
+pandas>=2.0

@@ -1,0 +1,57 @@
+{
+  "_meta": {
+    "description": "Question-generation topic list. Every entry is a real CSO ontology node (citable, third-party). Optional `exclude` lists name CSO sub-branches to subtract from a topic's closure to scrub well-documented cross-domain links in CSO's tree (e.g., 'named entity recognition' is a descendant of 'information retrieval' in CSO; we exclude it when defining the IR closure). All exclusions are documented and reproducible from the CSO ontology graph.",
+    "version": "3.0",
+    "match_rule": "A paper is 'about' a CSO topic T iff any of its CSO labels (from the classifier's union output) lies in closure(T) ∖ closure(exclude(T))."
+  },
+  "question_topics": [
+    {"cso_topic": "machine translation"},
+    {"cso_topic": "information extraction"},
+    {"cso_topic": "named entity recognition"},
+    {"cso_topic": "question answering"},
+    {"cso_topic": "dialogue systems"},
+    {"cso_topic": "sentiment analysis"},
+    {"cso_topic": "natural language generation"},
+    {"cso_topic": "text summarization"},
+    {"cso_topic": "text classification"},
+    {"cso_topic": "knowledge graphs"},
+    {"cso_topic": "reinforcement learning"},
+    {"cso_topic": "graph neural networks"},
+    {"cso_topic": "diffusion models"},
+    {"cso_topic": "retrieval-augmented generation"},
+    {"cso_topic": "large language models"},
+    {"cso_topic": "word sense disambiguation"},
+    {"cso_topic": "dependency parsing"},
+    {"cso_topic": "transfer learning"},
+    {
+      "cso_topic": "information retrieval",
+      "exclude": [
+        "named entity recognition", "named entity", "named entities",
+        "relation extraction", "information extraction", "extracting information",
+        "text summarization", "automatic summarization", "automatic text summarization",
+        "sentence extraction", "text classification", "text categorization",
+        "text classifiers", "text clustering", "text detection", "text entry",
+        "text document", "text processing", "text data", "electronic document",
+        "free texts", "handwritten texts", "printed texts", "scene text",
+        "question answering", "natural language questions", "answer extraction",
+        "recommendation", "recommender systems", "collaborative filtering",
+        "matrix factorizations", "collaborative recommendation", "collaborative tagging",
+        "context-aware recommender systems"
+      ]
+    },
+    {
+      "cso_topic": "speech recognition",
+      "exclude": [
+        "natural language understanding",
+        "language model", "language models",
+        "machine translation", "statistical machine translation",
+        "phrase-based statistical machine translation", "translation models",
+        "translation systems", "word alignment", "source language", "target language",
+        "language pairs", "parallel corpora", "bilingual corpora",
+        "computer aided language translation",
+        "dialogue", "dialogue management", "dialogue systems", "spoken dialogue",
+        "automatic evaluation"
+      ]
+    }
+  ]
+}

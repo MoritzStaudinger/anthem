@@ -1,0 +1,39 @@
+Bootstrap: docker
+From: python:3.11-slim
+
+%labels
+    Author Moritz Staudinger
+    Purpose Extract author affiliations (cross-check TEI + PyMu4LLM + raw) with local Qwen
+
+%environment
+    PYTHONUNBUFFERED=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+    TRANSFORMERS_NO_ADVISORY_WARNINGS=1
+    HF_HOME=/work/hf
+    TRANSFORMERS_CACHE=/work/hf
+    HF_HUB_DISABLE_TELEMETRY=1
+
+%post
+    set -e
+
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        git \
+        ca-certificates \
+        curl \
+        && rm -rf /var/lib/apt/lists/*
+
+    mkdir -p /app /work /logs /work/hf
+
+    # Install Python deps
+    # - torch: choose CPU by default for portability; use --nv + host CUDA for GPU runtime
+    #   If you want a CUDA-enabled torch wheel inside the image, we can do that too, but it is less portable.
+    pip install --no-cache-dir --upgrade pip setuptools wheel
+    pip install --no-cache-dir -r /app/requirements.txt
+
+%files
+    requirements.txt /app/requirements.txt
+    scripts/extract_affiliations.py /app/extract_affiliations.py
+
+%runscript
+    exec python3 -u /app/extract_affiliations.py "$@"

@@ -1,0 +1,25 @@
+# Each entry: name (folder), mode (fulltext|header|references), consolidate (0|1), coords (0|1)
+- name: fulltext_basic
+  mode: fulltext
+  consolidate: 0
+  coords: 0
+
+- name: fulltext_consolidated
+  mode: fulltext
+  consolidate: 1
+  coords: 0
+
+- name: fulltext_with_coordinates
+  mode: fulltext
+  consolidate: 1
+  coords: 1
+
+- name: header_only
+  mode: header
+  consolidate: 1
+  coords: 0
+
+- name: references_only
+  mode: references
+  consolidate: 1
+  coords: 0

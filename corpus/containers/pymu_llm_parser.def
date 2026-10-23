@@ -1,0 +1,42 @@
+Bootstrap: docker
+From: python:3.11-slim
+
+%labels
+    Author Moritz Staudinger
+    Purpose PyMuPDF4LLM-based PDF parsing for ACL / scientific corpora
+
+%environment
+    PYTHONUNBUFFERED=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+    LC_ALL=C.UTF-8
+    LANG=C.UTF-8
+
+%post
+    set -e
+
+    # System dependencies required by PyMuPDF
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        libglib2.0-0 \
+        libgl1 \
+        libxrender1 \
+        libxext6 \
+        libsm6 \
+        git \
+    && rm -rf /var/lib/apt/lists/*
+
+    # Create directory structure
+    mkdir -p /app
+    mkdir -p /work
+    mkdir -p /logs
+
+    # Install Python dependencies
+    pip install --no-cache-dir -r /app/requirements.txt
+
+%files
+    requirements.txt /app/requirements.txt
+    scripts/pymu_llm_parser.py /app/parse_pdfs.py
+
+%runscript
+    exec python3 -u /app/parse_pdfs.py "$@"

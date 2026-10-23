@@ -1,0 +1,90 @@
+# Pipeline matrix for affiliation-quality comparison.
+#
+# Each entry becomes one row in the comparison table.
+# Add / remove freely — the eval harness reads this verbatim.
+#
+# Pipeline types:
+#   ours          — current SciCo pipeline output (no extraction at eval time)
+#   s2orc         — S2ORC-normalized output (no extraction at eval time)
+#   grobid_only   — parse GROBID TEI headers, no LLM postprocessing
+#   llm           — configurable LLM × input-template extractor
+#
+# LLM backend × input matrix examples below — adjust models you have keys for.
+# Required env vars per backend:
+#   aqueduct    -> AQUEDUCT_API_KEY     (TU Wien gateway, free for staff)
+#   openai      -> OPENAI_API_KEY
+#   anthropic   -> ANTHROPIC_API_KEY
+#   openrouter  -> OPENROUTER_API_KEY
+
+pipelines:
+  # --- pass-through baselines (no extraction at eval time) ---
+  - id: ours
+    type: ours
+
+  - id: s2orc
+    type: s2orc
+
+  - id: grobid_only
+    type: grobid_only
+
+  # --- proprietary LLMs × input variants ---
+  - id: gpt4o_titleabstract
+    type: llm
+    backend: openai
+    model: gpt-4o
+    input_template: title_abstract
+
+  - id: gpt4o_pymu5k
+    type: llm
+    backend: openai
+    model: gpt-4o
+    input_template: pymu_first_n
+    input_kwargs: {n: 5000}
+
+  - id: gpt4o_grobidheader
+    type: llm
+    backend: openai
+    model: gpt-4o
+    input_template: grobid_header
+
+  - id: claude35_pymu5k
+    type: llm
+    backend: anthropic
+    model: claude-3-5-sonnet-20241022
+    input_template: pymu_first_n
+    input_kwargs: {n: 5000}
+
+  - id: claude35_grobidheader
+    type: llm
+    backend: anthropic
+    model: claude-3-5-sonnet-20241022
+    input_template: grobid_header
+
+  # --- open-weights via OpenRouter (no per-provider setup) ---
+  - id: llama70b_pymu5k
+    type: llm
+    backend: openrouter
+    model: meta-llama/llama-3.1-70b-instruct
+    input_template: pymu_first_n
+    input_kwargs: {n: 5000}
+
+  - id: mistral_large_pymu5k
+    type: llm
+    backend: openrouter
+    model: mistralai/mistral-large
+    input_template: pymu_first_n
+    input_kwargs: {n: 5000}
+
+  # --- Qwen via TU Wien Aqueduct (the model your current pipeline uses) ---
+  - id: qwen397b_pymu5k
+    type: llm
+    backend: aqueduct
+    model: qwen-3.5-397b
+    input_template: pymu_first_n
+    input_kwargs: {n: 5000}
+
+  - id: qwen397b_titleabstract
+    type: llm
+    backend: aqueduct
+    model: qwen-3.5-397b
+    input_template: title_abstract

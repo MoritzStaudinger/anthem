@@ -1,0 +1,215 @@
+# Pipeline matrix for the affiliation-comparison harness.
+#
+# IDs you can keep, drop, or duplicate-with-variants. Each entry becomes
+# one slurm job when launched via slurm/aff_compare_submit_all.sh.
+#
+# Backends + required env vars (set whichever you actually use in .env):
+#   aqueduct   -> AQUEDUCT_API_KEY     (TU Wien gateway, free for staff)
+#   openai     -> OPENAI_API_KEY       (GPT-5 etc.)
+#   anthropic  -> ANTHROPIC_API_KEY    (Claude Sonnet/Haiku/Opus)
+#   openrouter -> OPENROUTER_API_KEY   (Gemini 2.5, Llama, Mistral, etc.)
+
+pipelines:
+  # =================================================================
+  # PASS-THROUGH BASELINES (no extraction at eval time, free)
+  # =================================================================
+  - id: ours
+    type: ours
+
+  - id: s2orc
+    type: s2orc
+
+  # External graph-API pipelines — predictions JSONL is built directly by
+  # scripts/fetch_openalex_affiliations.py / fetch_s2_graph_affiliations.py
+  # (not at comparison time). type: passthrough_file just tells the
+  # scorer "you'll find predictions_<id>.jsonl in the out-dir, score it
+  # like any other pipeline".
+  - id: openalex
+    type: passthrough_file
+
+  - id: s2_graph
+    type: passthrough_file
+
+  # LoRA-adapted Qwen2.5-7B-Instruct trained on OpenAlex-derived
+  # affiliation supervision (~10k papers, gold set excluded).
+  # Predictions JSONL is produced by:
+  #   sbatch slurm/infer_lora_on_gold.sbatch
+  # and lands at reports/pipeline_comparison/predictions_lora_qwen25_7b_aff.jsonl.
+  - id: lora_qwen25_7b_aff
+    type: passthrough_file
+
+  # Zero-shot base Qwen2.5-7B-Instruct (no LoRA adapter) — control row
+  # for the LoRA ablation. Same script, --no-adapter flag.
+  # Produced by:
+  #   sbatch slurm/infer_base_qwen_on_gold.sbatch
+  # and lands at reports/pipeline_comparison/predictions_qwen25_7b_instruct.jsonl.
+  - id: qwen25_7b_instruct
+    type: passthrough_file
+
+  - id: grobid_only
+    type: grobid_only
+
+  # =================================================================
+  # AQUEDUCT MODELS — free via TU Wien gateway
+  # =================================================================
+  # qwen-3.5-397b dropped — too heavy for this task (long reasoning,
+  # higher latency, not actually better than the smaller open-weights
+  # options on a single-paper extraction). qwen3-embedding-4b excluded
+  # because it's an embedding model and can't generate JSON.
+  - id: aqueduct_qwen36_35b_pymu5k
+    type: llm
+    backend: aqueduct
+    model: qwen-3.6-35b       # mid-tier open-weights baseline
+    input_template: pymu_first_n
+    input_kwargs: {n: 5000}
+
+  - id: aqueduct_gemma4_e2b_pymu5k
+    type: llm
+    backend: aqueduct
+    model: gemma-4-e2b-it     # ~2B params, edge-model baseline
+    input_template: pymu_first_n
+    input_kwargs: {n: 5000}
+
+  # =================================================================
+  # PROPRIETARY FRONTIER MODELS
+  # =================================================================
+  - id: gpt5nano_pymu5k
+    type: llm
+    backend: openai
+    model: gpt-5.4-nano
+    input_template: pymu_first_n
+    input_kwargs: {n: 5000}
+
+  - id: claude_sonnet_pymu5k
+    type: llm
+    backend: anthropic
+    model: claude-sonnet-4-6   # adjust to your provisioned Claude Sonnet id
+    input_template: pymu_first_n
+    input_kwargs: {n: 5000}
+
+  - id: claude_haiku_pymu5k
+    type: llm
+    backend: anthropic
+    model: claude-haiku-4-5    # adjust to your provisioned Claude Haiku id
+    input_template: pymu_first_n
+    input_kwargs: {n: 5000}
+
+  - id: gemini25_pymu5k
+    type: llm
+    backend: google
+    model: gemini-2.5-pro
+    input_template: pymu_first_n
+    input_kwargs: {n: 5000}
+
+  # =================================================================
+  # COMBINED-INPUT RUNS — same models, but with title+abstract+GROBID
+  # header+PyMu body concatenated. Tells us whether feeding richer
+  # context to each LLM buys accuracy beyond a single source view.
+  # =================================================================
+  - id: aqueduct_qwen36_35b_combined
+    type: llm
+    backend: aqueduct
+    model: qwen-3.6-35b
+    input_template: combined
+
+  - id: aqueduct_gemma4_e2b_combined
+    type: llm
+    backend: aqueduct
+    model: gemma-4-e2b-it
+    input_template: combined
+
+  - id: gpt5nano_combined
+    type: llm
+    backend: openai
+    model: gpt-5.4-nano
+    input_template: combined
+
+  - id: claude_sonnet_combined
+    type: llm
+    backend: anthropic
+    model: claude-sonnet-4-6
+    input_template: combined
+
+  - id: claude_haiku_combined
+    type: llm
+    backend: anthropic
+    model: claude-haiku-4-5
+    input_template: combined
+
+  - id: gemini25_combined
+    type: llm
+    backend: google
+    model: gemini-2.5-pro
+    input_template: combined
+
+  # =================================================================
+  # INPUT-TEMPLATE ABLATION — every model × every input shape, but
+  # ONLY on free/cheap models (Aqueduct + Gemini-2.5) so we don't
+  # multiply frontier-model costs by 5x. The proprietary OpenAI/
+  # Anthropic rows above stay at pymu5k + combined only.
+  #
+  # Coverage of input templates per ablation model:
+  #   title_abstract    grobid_header    hybrid_first_n
+  # (pymu_first_n + combined are in the sections above for these
+  # same models — full 5-variant ablation when read together.)
+  # =================================================================
+
+  # --- qwen-3.6-35b ---
+  - id: ablation_qwen36_35b_titleabstract
+    type: llm
+    backend: aqueduct
+    model: qwen-3.6-35b
+    input_template: title_abstract
+
+  - id: ablation_qwen36_35b_grobidheader
+    type: llm
+    backend: aqueduct
+    model: qwen-3.6-35b
+    input_template: grobid_header
+
+  - id: ablation_qwen36_35b_hybrid5k
+    type: llm
+    backend: aqueduct
+    model: qwen-3.6-35b
+    input_template: hybrid_first_n
+    input_kwargs: {n: 5000}
+
+  # --- gemma-4-e2b-it ---
+  - id: ablation_gemma4_e2b_titleabstract
+    type: llm
+    backend: aqueduct
+    model: gemma-4-e2b-it
+    input_template: title_abstract
+
+  - id: ablation_gemma4_e2b_grobidheader
+    type: llm
+    backend: aqueduct
+    model: gemma-4-e2b-it
+    input_template: grobid_header
+
+  - id: ablation_gemma4_e2b_hybrid5k
+    type: llm
+    backend: aqueduct
+    model: gemma-4-e2b-it
+    input_template: hybrid_first_n
+    input_kwargs: {n: 5000}
+
+  # --- gemini-2.5-pro ---
+  - id: ablation_gemini25_titleabstract
+    type: llm
+    backend: google
+    model: gemini-2.5-pro
+    input_template: title_abstract
+
+  - id: ablation_gemini25_grobidheader
+    type: llm
+    backend: google
+    model: gemini-2.5-pro
+    input_template: grobid_header
+
+  - id: ablation_gemini25_hybrid5k
+    type: llm
+    backend: google
+    model: gemini-2.5-pro
+    input_template: hybrid_first_n
+    input_kwargs: {n: 5000}
