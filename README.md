@@ -3,30 +3,56 @@
 Code for *Singing from the Same ANTHEM: An Enriched ACL Anthology for Scholarly
 Comparison*.
 
-ANTHEM links 117,386 ACL Anthology papers to ROR-normalised author affiliations
-and Computer Science Ontology topic labels, keeping an evidence span for every
-extraction decision, and ships a comparative-QA benchmark whose ground truth is
-computed from that metadata rather than hand-annotated.
-
 Dataset: <https://huggingface.co/datasets/Molarix/anthem>
+
+## What the paper is about
+
+Scientometric questions about NLP research — which institutions work on which
+topics, how that has shifted, where collaboration happens — are hard to answer
+over the ACL Anthology because the Anthology stores no affiliations. The
+affiliation data that does exist elsewhere (OpenAlex, Semantic Scholar, S2ORC)
+covers the Anthology unevenly, and coverage correlates with DOI availability,
+so it thins out exactly on the older papers a longitudinal question needs.
+
+ANTHEM closes that gap by extracting affiliations from the PDFs themselves and
+normalising them against ROR, with Computer Science Ontology topic labels on
+top. Two things follow from building the metadata rather than borrowing it.
+
+First, the metadata has measurable reliability, and the paper reports it as
+bounds rather than a single headline: extraction F1 0.760 against a 781-paper
+decade-stratified gold set, ROR linking 0.857 on hand-checked strings, CSO
+topic precision 0.713. Roughly 90% of the remaining errors are linking rather
+than extraction failures, concentrated in city-level institution clusters and
+branched corporate entities.
+
+Second, because the corpus defines the ground truth, a comparative-QA benchmark
+can be derived from it rather than annotated. A question such as *"what did
+institution X contribute to topic Y between 2022 and 2025"* has a gold answer
+computable from the corpus: the ROR id, the CSO topic closure, and the year
+range determine the paper set. The benchmark therefore measures whether a
+system can filter and rank over scholarly metadata, it is reproducible against
+an archived snapshot, and it extends to future snapshots without re-annotation.
+
+Evidence spans are retained for every extraction decision, so a disputed
+affiliation can be traced back to the text it came from.
 
 ## Layout
 
 | Directory | What |
 |---|---|
-| `corpus/` | builds the dataset: download, parse, extract affiliations, link to ROR, label topics, and all the evaluation in §3–§4 and the appendices |
+| `corpus/` | builds the dataset: download, parse, extract affiliations, link to ROR, label topics, plus the evaluation in §3 and the appendices |
 | `benchmark/` | the comparative-QA system and its evaluation: retrieval, pipeline and agent RAG modes, RAGAS judging |
 | `release/` | packages the pipeline output into the published HuggingFace dataset |
 
-`corpus/` and `benchmark/` were developed as two repositories and keep their own
-READMEs, requirements and Slurm scripts. They run independently: `benchmark/`
-consumes `corpus/` output from disk, not by import.
+`corpus/` and `benchmark/` grew as two repositories and keep their own READMEs,
+requirements and Slurm scripts. They run independently — `benchmark/` reads
+`corpus/` output from disk rather than importing it.
 
 ## Reproducing the paper
 
-Every number has a script. The reports land under `reports/` in each half.
+The reports land under `reports/` in each half.
 
-### Corpus (§3, §B)
+### Corpus
 
 | Result | Command |
 |---|---|
@@ -41,7 +67,7 @@ Every number has a script. The reports land under `reports/` in each half.
 | Extraction cost | `corpus/scripts/cost_extraction.py`, `corpus/scripts/cost_summary.py` |
 | Corpus statistics and figures | `corpus/scripts/corpus_stats.py`, `corpus/scripts/aggregate_yearly_stats.py`, `corpus/scripts/plot_*.py` |
 
-### Benchmark (§4, §C)
+### Benchmark
 
 | Result | Command |
 |---|---|
@@ -62,32 +88,29 @@ cd release && make release && make check && make upload
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in whichever provider keys you need. No
-key is read from anywhere else; nothing is hardcoded.
+Copy `.env.example` to `.env` and fill in the provider keys you need. Nothing
+is read from anywhere else and nothing is hardcoded.
 
 ```bash
 cp .env.example .env
 ```
 
-The benchmark's LLM wiring lives in `benchmark/backend/rag/rag_utils.py`
-(`configure_llm`), and which pipelines the corpus aggregator will accept is
-declared in `corpus/configs/pipelines.yaml` — a pipeline without an entry there
-is silently dropped from the leaderboard.
+The benchmark's LLM wiring is in `benchmark/backend/rag/rag_utils.py`
+(`configure_llm`). Which pipelines the corpus aggregator accepts is declared in
+`corpus/configs/pipelines.yaml` — a pipeline without an entry there is dropped
+from the leaderboard without warning.
 
 ## Paths
 
-Scripts and Slurm jobs carry the authors' cluster layout
-(`/share/moritz.staudinger/acl_data/...`) as default arguments, because that is
-what the reported runs actually used. They are defaults, not requirements:
-every path is overridable on the command line. Point them at your own copy of
-the data, or at the HuggingFace dataset.
+Scripts and Slurm jobs carry the cluster layout they were run on
+(`/share/moritz.staudinger/acl_data/...`) as default arguments. They are
+defaults, not requirements: every path is overridable on the command line.
+Point them at your own copy of the data, or at the HuggingFace dataset.
 
 ## Not included
 
-- **Source PDFs.** The ACL Anthology serves those; ~196k of them is 80 GB.
+- **Source PDFs.** The Anthology serves those, and ~196k of them is 80 GB.
 - **Pipeline output.** Published as the HuggingFace dataset instead.
-- **The trained LoRA adapter** (Qwen2.5-7B-Instruct, r=16). Belongs in a model
-  repository.
 - **Exploratory notebooks.** `extractor.ipynb` and `analysis.ipynb` from the
   original working repositories are superseded by the scripts above.
 

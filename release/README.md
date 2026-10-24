@@ -98,12 +98,10 @@ parse and scrubbing would damage the TEI's `<email>` elements. Pass
 
 ## Still outstanding
 
-The paper's appendix promises that "all scripts, configurations, training data,
-OpenAlex query cache, and the trained adapter are released alongside ANTHEM".
-The training data ships as the `lora_train` config. The **trained adapter**
-(`models/qwen25_7b_aff_lora/adapter`, Qwen2.5-7B-Instruct, r=16, 78 MB) belongs
-in a *model* repo rather than this dataset, and the OpenAlex query cache is not
-packaged yet.
+The paper's appendix states that all scripts, configurations, training data,
+the OpenAlex query cache and the trained adapter are released alongside ANTHEM.
+The training data ships as the `lora_train` config; the OpenAlex query cache is
+not packaged yet.
 
 ## Licensing
 
